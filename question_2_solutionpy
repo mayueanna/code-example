@@ -1,0 +1,161 @@
+import random
+import time
+import math
+import multiprocessing as mp
+
+def estimate_pi(n):
+    """
+    Estimate the value of pi using the Monte Carlo method by generating n random points.
+
+    Args: 
+        a large number n
+
+    Return: 
+        estimated pi
+    """
+    num_points_in_circle = 0
+
+    for i in range(n):
+        x = random.uniform(0, 1)
+        y = random.uniform(0, 1)
+        distance = math.sqrt(x**2 + y**2)
+        if distance <= 1:
+            num_points_in_circle += 1
+    
+    # The area is proportional to the percentage of points within the circle in the first quadrant
+    # p = num_points_in_circle / n = 0.25 * pi 
+    return 4 * num_points_in_circle / n
+
+def serial_process(large_number, num_cores):
+    """
+    Estimate the value of pi using Serial process for several large numbers
+
+    Args: 
+        a large number n
+        number of cores
+
+    Return: 
+        estimated pi
+        average time taken
+
+
+    """
+    list_of_numbers = [large_number] * num_cores [1000000, 2000000, 30000000] 
+    time_taken = 0
+    pi = 0 
+    for n in list_of_numbers:
+        start_time = time.time()
+        pi_estimate = estimate_pi(n)
+        end_time = time.time()
+
+        time_taken += (end_time - start_time)
+        pi += pi_estimate
+
+    return pi/len(list_of_numbers), time_taken/len(list_of_numbers)
+
+def multi_process(large_number, num_cores):
+    """
+    Estimate the value of pi using multi process
+
+    Args: 
+        a large number n
+        number of cores
+
+    Return: 
+        estimated pi
+        average time taken
+
+    """
+    start_time = time.time()
+    chunk_size = int(large_number / num_cores)   
+    # Create a pool of processes
+    with mp.Pool(num_cores) as p:
+        pi_estimate = sum(p.map(estimate_pi, [chunk_size] * num_cores))/num_cores
+
+    end_time = time.time()
+
+    return pi_estimate, (end_time - start_time)
+
+          
+#Use serial
+if __name__ == '__main__':
+    n_larger = 10000000 # case_1: a larger iteration
+    n_smaller = 1000000 # case_2: a smaller iteration
+    num_cores = mp.cpu_count() # the number of cpu cores
+
+    # ## Serial Process
+    # print('--------- Serial Process --------')
+    # #Run the estimate_pi() function n times for some large values of n and estimate the value of pi
+    # pi_serial_1, time_serial_1 = serial_process(n_larger, num_cores)
+    # pi_serial_2, time_serial_2 = serial_process(n_smaller, num_cores)
+
+    # print(f"Estimated value of pi for a larger iteration: {pi_serial_1}")
+    # print(f"Time taken for serial process for a larger iteration: {time_serial_1} seconds")
+    # print(f"Estimated value of pi for a larger iteration: {pi_serial_2}")
+    # print(f"Time taken for serial process for a larger iteration: {time_serial_2} seconds")
+
+    # ## Multiprocessing
+    # print('--------- Multiprocessing --------')
+    pi_multiprocessing_1, time_multiprocessing_1 = multi_process(n_larger, num_cores)
+    # pi_multiprocessing_2, time_multiprocessing_2 = multi_process(n_smaller, num_cores)
+
+    # print(f"Estimated value of pi for a larger iteration: {pi_multiprocessing_1}")
+    # print(f"Time taken for multiprocessing a larger iteration: {time_multiprocessing_1} seconds")
+    # print(f"Estimated value of pi for a smaller iteration: {pi_multiprocessing_2}")
+    # print(f"Time taken for multiprocessing a smaller iteration: {time_multiprocessing_2} seconds\n")
+
+    # ## Realized speed up
+    # print('--------- Realized vs. Expected Speedup --------')
+    # print(f'Realized Speed up for larger iteration: {time_serial_1/time_multiprocessing_1}')
+    # print(f'Realized Speed up for smaller iteration: {time_serial_2/time_multiprocessing_2}')
+    # print(f"Number of cores: {num_cores}")
+
+"""
+
+############ Printed Results ############
+
+--------- Serial Process --------
+Estimated value of pi for a larger iteration: 3.1419163999999995
+Time taken for serial process for a larger iteration: 6.887836337089539 seconds
+Estimated value of pi for a larger iteration: 3.1411205
+Time taken for serial process for a larger iteration: 0.6959742307662964 seconds
+--------- Multiprocessing --------
+Estimated value of pi for a larger iteration: 3.1419644
+Time taken for multiprocessing a larger iteration: 1.609076976776123 seconds
+Estimated value of pi for a smaller iteration: 3.1427240000000003
+Time taken for multiprocessing a smaller iteration: 0.2580888271331787 seconds
+
+--------- Realized vs. Expected Speedup --------
+Realized Speed up for larger iteration: 4.2806133183818895
+Realized Speed up for smaller iteration: 2.696646106292546
+Number of cores: 8
+
+
+############ Comments on Accuracy  ############
+
+1) The accuracy of this method depends on the number of points generated. 
+As the number of points generated increases, the estimate of pi becomes more accurate. 
+
+2) It is important to note that Monte Carlo methods are inherently probabilistic, 
+so even with a very large number of points generated, 
+there will still be some degree of uncertainty in the estimated value of pi.
+
+3) To improve the accuracy of the estimate, we can run the estimate_pi function 
+multiple times with large values of n and take the average of the results.
+
+
+
+############ Comment on the Expected Speedup vs. Realized Speedup  ############
+
+1) The expected speedup of the parallelized code depends on the number of available cores 
+and the amount of work done by each process. 
+
+2) In this case, each process does roughly the same amount of work, 
+so we can expect a linear speedup up to the number of available cores. 
+For example, if we have 8 cores and run the program with n = 10000000, 
+each process will run 1250000 iterations, and the expected speedup would be close to 8. 
+
+3) However, the realized speedup may be lower due to overhead from inter-process communication and other factors.
+One reason is that Pool has to duplicate every bit of memory used in calculation, so it may be memory expensive.
+The more expensive the calculation, the more efficient the multiprocessing.
+"""
